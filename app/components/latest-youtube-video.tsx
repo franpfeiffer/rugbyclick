@@ -1,39 +1,44 @@
-"use client"
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'
 
 export default function LatestYouTubeVideo() {
-  const [videoId, setVideoId] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [videoId, setVideoId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchLatestVideo = async () => {
-      const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
-      const CHANNEL_ID = 'UC0R4ciFowE-JA8FrOuK_FGw';
+    async function fetchLatestVideo() {
       try {
-        const response = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&maxResults=1&order=date&type=video&key=${YOUTUBE_API_KEY}`);
-        const data = await response.json();
-        if (data.items && data.items.length > 0) {
-          setVideoId(data.items[0].id.videoId);
-        } else {
-          throw new Error("No se encontraron videos");
+        const response = await fetch('/api/fetch-latest-yt-video')
+        if (!response.ok) {
+          throw new Error(`http error status: ${response.status}`)
         }
-      } catch (err: unknown) {
-        if (err instanceof Error) {
-          setError(err.message);
+        const data = await response.json()
+        if (data.videoId) {
+          setVideoId(data.videoId)
+        } else if (data.error) {
+          throw new Error(data.error)
         } else {
-          setError("Ha ocurrido un error desconocido");
+          throw new Error("response no esperada del server")
         }
+      } catch (err) {
+        console.error('error fetcheando: ', err)
+        setError(err instanceof Error ? err.message : "error al conseguir el video")
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
-    fetchLatestVideo();
-  }, []);
+    }
 
-  if (loading) return <div className="h-full flex items-center justify-center">Cargando...</div>;
-  if (error) return <div className="h-full flex items-center justify-center">Error: {error}</div>;
+    fetchLatestVideo()
+  }, [])
+
+  if (loading) return <div className="h-full flex items-center justify-center">Cargando...</div>
+  if (error) return (
+    <div className="h-full flex flex-col items-center justify-center">
+      <p>Error: {error}</p>
+      <p className="mt-2 text-sm text-gray-500">Por favor, intenta recargar la página. Si el problema persiste no podra ver el video. Lo sentimos!</p>
+    </div>
+  )
+  if (!videoId) return <div className="h-full flex items-center justify-center">No se encontró ningún video</div>
 
   return (
     <iframe
@@ -42,5 +47,5 @@ export default function LatestYouTubeVideo() {
       className="w-full h-full"
       allowFullScreen
     ></iframe>
-  );
+  )
 }
